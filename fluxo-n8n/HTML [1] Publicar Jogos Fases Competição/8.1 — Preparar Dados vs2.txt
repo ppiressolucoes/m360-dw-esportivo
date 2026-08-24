@@ -1,0 +1,547 @@
+// ============================================================
+// MENGÃO 360
+// HTML [1] - Publicar Jogos Fases Competição
+// NODE 8.1 - PREPARAR / NORMALIZAR DADOS HTML
+//
+// Objetivo:
+// - Receber a saída do Node 7.
+// - Preservar a estrutura funcional existente.
+// - Normalizar arrays/objetos para os nodes seguintes.
+// - NÃO gerar HTML.
+// - NÃO recalcular resultados.
+// - NÃO alterar dados do DW.
+// - NÃO alterar o ETL.
+//
+// Entrada:
+//   Node 7 - Montar JSON Competição Idioma
+//
+// Saída:
+//   Estrutura canônica para os Nodes 8.2 / 8.3 / 8.4
+// ============================================================
+
+const input = items?.[0]?.json || {};
+
+
+// ============================================================
+// 1. DADOS PRINCIPAIS
+// ============================================================
+
+const competicao = (
+  input.competicao &&
+  typeof input.competicao === 'object'
+)
+  ? input.competicao
+  : {};
+
+const classificacao = (
+  input.classificacao &&
+  typeof input.classificacao === 'object'
+)
+  ? input.classificacao
+  : {};
+
+const grupos = (
+  input.grupos &&
+  typeof input.grupos === 'object'
+)
+  ? input.grupos
+  : {};
+
+const mata_mata = (
+  input.mata_mata &&
+  typeof input.mata_mata === 'object'
+)
+  ? input.mata_mata
+  : {};
+
+const liga = (
+  input.liga &&
+  typeof input.liga === 'object'
+)
+  ? input.liga
+  : {};
+
+
+// ============================================================
+// 2. METADADOS
+// ============================================================
+
+const tipo_publicacao =
+  input.tipo_publicacao ||
+  input.meta?.tipo_publicacao ||
+  '';
+
+const idioma =
+  input.idioma ||
+  'pt-BR';
+
+const i18n = (
+  input.i18n &&
+  typeof input.i18n === 'object'
+)
+  ? input.i18n
+  : {};
+
+
+// ============================================================
+// 3. NORMALIZAÇÃO DA CLASSIFICAÇÃO
+// ============================================================
+//
+// Não recalcula classificação.
+// Apenas garante estrutura segura para renderização.
+//
+// Pode receber:
+//   classificacao = {
+//      "A": [...],
+//      "B": [...]
+//   }
+//
+// ou estrutura vazia.
+//
+
+const classificacaoNormalizada = {};
+
+for (const [grupo, tabela] of Object.entries(classificacao)) {
+
+  classificacaoNormalizada[grupo] =
+    Array.isArray(tabela)
+      ? tabela
+      : [];
+}
+
+
+// ============================================================
+// 4. NORMALIZAÇÃO DOS GRUPOS
+// ============================================================
+
+const gruposNormalizados = {};
+
+for (const [grupo, dados] of Object.entries(grupos)) {
+
+  if (!dados || typeof dados !== 'object') {
+    gruposNormalizados[grupo] = {
+      rodadas: []
+    };
+    continue;
+  }
+
+  gruposNormalizados[grupo] = {
+    ...dados,
+
+    rodadas: Array.isArray(dados.rodadas)
+      ? dados.rodadas
+      : []
+  };
+}
+
+
+// ============================================================
+// 5. NORMALIZAÇÃO DO MATA-MATA
+// ============================================================
+//
+// IMPORTANTE:
+//
+// O Node 8.1 NÃO altera o DW nem o ETL.
+// Ele apenas prepara a saída do Node 7 para o HTML.
+//
+// Para confrontos decididos por pênaltis, algumas fontes
+// entregam `gols_time_a/b` como o total que inclui a pontuação
+// das penalidades. Como `penalti_time_a/b` vem separado, o
+// placar regulamentar pode ser preservado de forma explícita:
+//
+//   placar_normal = gols_time - penalti_time
+//
+// Exemplo real validado:
+//   O7: gols_time = 8 x 7
+//       pênaltis  = 7 x 6
+//       normal    = 1 x 1
+//
+//   O8: gols_time = 5 x 6
+//       pênaltis  = 4 x 5
+//       normal    = 1 x 1
+//
+// Quando não há pênaltis, os campos de placar já existentes
+// permanecem inalterados.
+//
+// NÃO recalcula:
+// - gols agregados
+// - vencedor
+// - classificação
+// - status do confronto
+//
+// Apenas cria aliases explícitos para o placar regulamentar,
+// sem remover nenhum campo original.
+//
+
+function normalizarNumeroPlacar(valor) {
+
+  if (
+    valor === null ||
+    valor === undefined ||
+    valor === ''
+  ) {
+    return null;
+  }
+
+  const numero = Number(valor);
+
+  return Number.isFinite(numero)
+    ? numero
+    : null;
+}
+
+
+function normalizarPlacarRegulamentar(confronto) {
+
+  const c =
+    confronto &&
+    typeof confronto === 'object'
+      ? confronto
+      : {};
+
+  const penaltiA =
+    normalizarNumeroPlacar(
+      c.penalti_time_a
+    );
+
+  const penaltiB =
+    normalizarNumeroPlacar(
+      c.penalti_time_b
+    );
+
+  const golsA =
+    normalizarNumeroPlacar(
+      c.gols_time_a
+    );
+
+  const golsB =
+    normalizarNumeroPlacar(
+      c.gols_time_b
+    );
+
+  const possuiPenaltis =
+    penaltiA !== null &&
+    penaltiB !== null;
+
+  /*
+   * Se o placar regulamentar já veio explicitamente
+   * separado, ele tem prioridade absoluta.
+   */
+  const idaMandante =
+    c.placar_normal_ida_mandante ??
+    c.placar_regulamentar_ida_mandante ??
+    null;
+
+  const idaVisitante =
+    c.placar_normal_ida_visitante ??
+    c.placar_regulamentar_ida_visitante ??
+    null;
+
+  const voltaMandante =
+    c.placar_normal_volta_mandante ??
+    c.placar_regulamentar_volta_mandante ??
+    null;
+
+  const voltaVisitante =
+    c.placar_normal_volta_visitante ??
+    c.placar_regulamentar_volta_visitante ??
+    null;
+
+  const unicoMandante =
+    c.placar_normal_unico_mandante ??
+    c.placar_regulamentar_unico_mandante ??
+    null;
+
+  const unicoVisitante =
+    c.placar_normal_unico_visitante ??
+    c.placar_regulamentar_unico_visitante ??
+    null;
+
+  /*
+   * Se houver pênaltis e não houver placar regulamentar
+   * explícito, os campos gols_time_a/b são tratados como
+   * total com desempate. Subtrair a pontuação dos pênaltis
+   * recupera o placar regulamentar.
+   *
+   * Isso é feito SOMENTE quando os dois lados de pênaltis
+   * estão presentes e os dois gols agregados são numéricos.
+   */
+  const normalA =
+    possuiPenaltis &&
+    golsA !== null &&
+    golsB !== null
+      ? golsA - penaltiA
+      : null;
+
+  const normalB =
+    possuiPenaltis &&
+    golsA !== null &&
+    golsB !== null
+      ? golsB - penaltiB
+      : null;
+
+  return {
+
+    ...c,
+
+    placar_normal_ida_mandante:
+      idaMandante !== null
+        ? idaMandante
+        : normalA,
+
+    placar_normal_ida_visitante:
+      idaVisitante !== null
+        ? idaVisitante
+        : normalB,
+
+    placar_normal_volta_mandante:
+      voltaMandante !== null
+        ? voltaMandante
+        : normalB,
+
+    placar_normal_volta_visitante:
+      voltaVisitante !== null
+        ? voltaVisitante
+        : normalA,
+
+    placar_normal_unico_mandante:
+      unicoMandante !== null
+        ? unicoMandante
+        : normalA,
+
+    placar_normal_unico_visitante:
+      unicoVisitante !== null
+        ? unicoVisitante
+        : normalB,
+
+    placar_regulamentar_ida_mandante:
+      c.placar_regulamentar_ida_mandante ??
+      (
+        idaMandante !== null
+          ? idaMandante
+          : normalA
+      ),
+
+    placar_regulamentar_ida_visitante:
+      c.placar_regulamentar_ida_visitante ??
+      (
+        idaVisitante !== null
+          ? idaVisitante
+          : normalB
+      ),
+
+    placar_regulamentar_volta_mandante:
+      c.placar_regulamentar_volta_mandante ??
+      (
+        voltaMandante !== null
+          ? voltaMandante
+          : normalB
+      ),
+
+    placar_regulamentar_volta_visitante:
+      c.placar_regulamentar_volta_visitante ??
+      (
+        voltaVisitante !== null
+          ? voltaVisitante
+          : normalA
+      ),
+
+    placar_regulamentar_unico_mandante:
+      c.placar_regulamentar_unico_mandante ??
+      (
+        unicoMandante !== null
+          ? unicoMandante
+          : normalA
+      ),
+
+    placar_regulamentar_unico_visitante:
+      c.placar_regulamentar_unico_visitante ??
+      (
+        unicoVisitante !== null
+          ? unicoVisitante
+          : normalB
+      )
+
+  };
+}
+
+
+function normalizarListaMata(lista) {
+
+  if (!Array.isArray(lista)) {
+    return [];
+  }
+
+  return lista.map(
+    normalizarPlacarRegulamentar
+  );
+}
+
+
+const mataNormalizado = {
+
+  fase_32:
+    normalizarListaMata(
+      mata_mata.fase_32
+    ),
+
+  oitavas:
+    normalizarListaMata(
+      mata_mata.oitavas
+    ),
+
+  quartas:
+    normalizarListaMata(
+      mata_mata.quartas
+    ),
+
+  semifinais:
+    normalizarListaMata(
+      mata_mata.semifinais
+    ),
+
+  terceiro_lugar:
+    normalizarListaMata(
+      mata_mata.terceiro_lugar
+    ),
+
+  final:
+    normalizarListaMata(
+      mata_mata.final
+    )
+};
+
+
+// ============================================================
+// 6. NORMALIZAÇÃO DA LIGA
+// ============================================================
+
+const ligaNormalizada = {
+  ...liga,
+
+  classificacao: Array.isArray(liga.classificacao)
+    ? liga.classificacao
+    : [],
+
+  rodadas: Array.isArray(liga.rodadas)
+    ? liga.rodadas
+    : []
+};
+
+
+// ============================================================
+// 7. NORMALIZAÇÃO DO TIPO DE PUBLICAÇÃO
+// ============================================================
+
+const tipoPublicacaoNormalizado =
+  String(tipo_publicacao || '')
+    .trim()
+    .toUpperCase();
+
+
+// ============================================================
+// 8. IDENTIFICAÇÃO DO MODELO
+// ============================================================
+
+const isLiga =
+  tipoPublicacaoNormalizado === 'PONTOS_CORRIDOS';
+
+const possuiGrupos =
+  Object.keys(gruposNormalizados).length > 0;
+
+const possuiMataMata =
+  Object.values(mataNormalizado)
+    .some(lista => Array.isArray(lista) && lista.length > 0);
+
+const possuiClassificacao =
+  Object.values(classificacaoNormalizada)
+    .some(lista => Array.isArray(lista) && lista.length > 0);
+
+const possuiLiga =
+  ligaNormalizada.classificacao.length > 0 ||
+  ligaNormalizada.rodadas.length > 0;
+
+
+// ============================================================
+// 9. METADADOS PARA OS PRÓXIMOS NODES
+// ============================================================
+
+const meta_html = {
+
+  versao: 'HTML1_MODULAR_v1',
+
+  etapa: '8.1',
+
+  objetivo: 'PREPARAR_DADOS',
+
+  modelo: isLiga
+    ? 'PONTOS_CORRIDOS'
+    : 'COPA',
+
+  idioma,
+
+  possui_grupos: possuiGrupos,
+
+  possui_classificacao: possuiClassificacao,
+
+  possui_mata_mata: possuiMataMata,
+
+  possui_liga: possuiLiga,
+
+  fases: {
+    grupos: possuiGrupos,
+
+    fase_32:
+      mataNormalizado.fase_32.length > 0,
+
+    oitavas:
+      mataNormalizado.oitavas.length > 0,
+
+    quartas:
+      mataNormalizado.quartas.length > 0,
+
+    semifinais:
+      mataNormalizado.semifinais.length > 0,
+
+    terceiro_lugar:
+      mataNormalizado.terceiro_lugar.length > 0,
+
+    final:
+      mataNormalizado.final.length > 0
+  }
+};
+
+
+// ============================================================
+// 10. SAÍDA CANÔNICA
+// ============================================================
+
+return [
+  {
+    json: {
+
+      competicao,
+
+      classificacao:
+        classificacaoNormalizada,
+
+      grupos:
+        gruposNormalizados,
+
+      mata_mata:
+        mataNormalizado,
+
+      liga:
+        ligaNormalizada,
+
+      tipo_publicacao:
+        tipoPublicacaoNormalizado,
+
+      idioma,
+
+      i18n,
+
+      meta_html
+    }
+  }
+];
