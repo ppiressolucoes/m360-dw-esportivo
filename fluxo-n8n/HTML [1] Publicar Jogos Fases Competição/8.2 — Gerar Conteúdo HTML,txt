@@ -1,0 +1,2481 @@
+// ============================================================
+// MENGÃO 360
+// HTML [1] - Publicar Jogos Fases Competição
+//
+// NODE 8.2 - GERAR CONTEÚDO HTML
+//
+// Base: Node 8 original
+// Adaptação: arquitetura modular 8.1 -> 8.2 -> 8.3 -> 8.4
+//
+// RESPONSABILIDADES:
+// - I18N / fallbacks
+// - nomes de equipes
+// - classificação
+// - jogos por rodada
+// - liga / pontos corridos
+// - grupos
+// - mata-mata
+// - configuração das fases
+//
+// NÃO RESPONSÁVEL POR:
+// - CSS global do widget
+// - JavaScript global de navegação
+// - persistência em cache_widgets
+// - alteração/reprocessamento do DW
+// ============================================================
+
+
+const data = items[0]?.json || {};
+
+
+// ============================================================
+// 1. DADOS RECEBIDOS DO NODE 8.1
+// ============================================================
+
+const competicao = data.competicao || {};
+const classificacao = data.classificacao || {};
+const grupos = data.grupos || {};
+const mata = data.mata_mata || {};
+const liga = data.liga || {};
+
+const tipo_publicacao =
+  data.tipo_publicacao ||
+  data.meta_html?.tipo_publicacao ||
+  '';
+
+const idioma =
+  data.idioma ||
+  'pt-BR';
+
+const i18n =
+  data.i18n ||
+  {};
+
+
+// ============================================================
+// 2. FALLBACKS TRILÍNGUES
+// Mantidos do Node 8 original.
+// ============================================================
+
+const M360_FALLBACKS = {
+
+  'pt-BR': {
+    tabela: 'TABELA',
+    jogos: 'JOGOS',
+    classificacao: 'CLASSIFICAÇÃO',
+    classificacao_indisponivel: 'Classificação ainda não disponível.',
+    jogos_indisponiveis: 'Jogos indisponíveis.',
+    fase_grupos_indisponivel: 'Fase de grupos indisponível.',
+    fase_indisponivel: 'Fase ainda não disponível.',
+    rodada: 'Rodada',
+    rodada_grupo: 'Rodada',
+    grupo: 'Grupo',
+    jogo: 'JOGO',
+    volta: 'VOLTA',
+    jogos_label: 'jogos',
+    times_label: 'times',
+    a_definir: 'A definir',
+    vencedor: 'Vencedor',
+    perdedor: 'Perdedor',
+
+    col_pontos: 'Pts',
+    col_jogos: 'J',
+    col_vitorias: 'V',
+    col_empates: 'E',
+    col_derrotas: 'D',
+    col_gols_pro: 'GP',
+    col_gols_contra: 'GC',
+    col_saldo_gols: 'SG',
+
+    GROUP_STAGE: 'FASE DE GRUPOS',
+    LAST_32: '32 AVOS DE FINAL',
+    LAST_16: 'OITAVAS DE FINAL',
+    QUARTER_FINALS: 'QUARTAS DE FINAL',
+    SEMI_FINALS: 'SEMIFINAL',
+    THIRD_PLACE: 'DISPUTA DE 3º LUGAR',
+    FINAL: 'FINAL',
+
+    vazio_32: '32 avos de final ainda não disponíveis.',
+    vazio_oitavas: 'Oitavas de final ainda não disponíveis.',
+    vazio_quartas: 'Quartas de final ainda não disponíveis.',
+    vazio_semifinais: 'Semifinal ainda não disponível.',
+    vazio_terceiro_lugar: 'Disputa de 3º lugar ainda não disponível.',
+    vazio_final: 'Final ainda não disponível.'
+  },
+
+  'en-US': {
+    tabela: 'TABLE',
+    jogos: 'MATCHES',
+    classificacao: 'STANDINGS',
+    classificacao_indisponivel: 'Standings are not available yet.',
+    jogos_indisponiveis: 'Matches unavailable.',
+    fase_grupos_indisponivel: 'Group stage unavailable.',
+    fase_indisponivel: 'Stage not available yet.',
+    rodada: 'Round',
+    rodada_grupo: 'Matchday',
+    grupo: 'Group',
+    jogo: 'MATCH',
+    volta: 'SECOND LEG',
+    jogos_label: 'matches',
+    times_label: 'teams',
+    a_definir: 'TBD',
+    vencedor: 'Winner',
+    perdedor: 'Loser',
+
+    col_pontos: 'Pts',
+    col_jogos: 'P',
+    col_vitorias: 'W',
+    col_empates: 'D',
+    col_derrotas: 'L',
+    col_gols_pro: 'GF',
+    col_gols_contra: 'GA',
+    col_saldo_gols: 'GD',
+
+    GROUP_STAGE: 'GROUP STAGE',
+    LAST_32: 'ROUND OF 32',
+    LAST_16: 'ROUND OF 16',
+    QUARTER_FINALS: 'QUARTER-FINALS',
+    SEMI_FINALS: 'SEMI-FINALS',
+    THIRD_PLACE: 'THIRD PLACE',
+    FINAL: 'FINAL',
+
+    vazio_32: 'Round of 32 is not available yet.',
+    vazio_oitavas: 'Round of 16 is not available yet.',
+    vazio_quartas: 'Quarter-finals are not available yet.',
+    vazio_semifinais: 'Semi-finals are not available yet.',
+    vazio_terceiro_lugar: 'Third-place match is not available yet.',
+    vazio_final: 'Final is not available yet.'
+  },
+
+  'es-ES': {
+    tabela: 'TABLA',
+    jogos: 'PARTIDOS',
+    classificacao: 'CLASIFICACIÓN',
+    classificacao_indisponivel: 'La clasificación aún no está disponible.',
+    jogos_indisponiveis: 'Partidos no disponibles.',
+    fase_grupos_indisponivel: 'Fase de grupos no disponible.',
+    fase_indisponivel: 'Fase aún no disponible.',
+    rodada: 'Jornada',
+    rodada_grupo: 'Jornada',
+    grupo: 'Grupo',
+    jogo: 'PARTIDO',
+    volta: 'VUELTA',
+    jogos_label: 'partidos',
+    times_label: 'equipos',
+    a_definir: 'Por definir',
+    vencedor: 'Ganador',
+    perdedor: 'Perdedor',
+
+    col_pontos: 'Pts',
+    col_jogos: 'PJ',
+    col_vitorias: 'G',
+    col_empates: 'E',
+    col_derrotas: 'P',
+    col_gols_pro: 'GF',
+    col_gols_contra: 'GC',
+    col_saldo_gols: 'DG',
+
+    GROUP_STAGE: 'FASE DE GRUPOS',
+    LAST_32: 'DIECISEISAVOS',
+    LAST_16: 'OCTAVOS DE FINAL',
+    QUARTER_FINALS: 'CUARTOS DE FINAL',
+    SEMI_FINALS: 'SEMIFINALES',
+    THIRD_PLACE: 'TERCER PUESTO',
+    FINAL: 'FINAL',
+
+    vazio_32: 'Dieciseisavos aún no disponibles.',
+    vazio_oitavas: 'Octavos de final aún no disponibles.',
+    vazio_quartas: 'Cuartos de final aún no disponibles.',
+    vazio_semifinais: 'Semifinales aún no disponibles.',
+    vazio_terceiro_lugar: 'Partido por el tercer puesto aún no disponible.',
+    vazio_final: 'Final aún no disponible.'
+  }
+
+};
+
+
+// ============================================================
+// 3. I18N
+// ============================================================
+
+function fb(chave, fallbackPt = '') {
+  return (
+    M360_FALLBACKS[idioma]?.[chave] ||
+    M360_FALLBACKS['pt-BR']?.[chave] ||
+    fallbackPt ||
+    chave ||
+    ''
+  );
+}
+
+
+function tr(modulo, tipo, chave, fallback) {
+
+  const chaveStr =
+    String(chave || '').trim();
+
+  if (!chaveStr) {
+    return fallback || '';
+  }
+
+  const k1 =
+    [modulo || 'GLOBAL', tipo, chaveStr, idioma].join('|');
+
+  const k2 =
+    ['GLOBAL', tipo, chaveStr, idioma].join('|');
+
+  const k3 =
+    [modulo || 'GLOBAL', tipo, chaveStr, 'pt-BR'].join('|');
+
+  const k4 =
+    ['GLOBAL', tipo, chaveStr, 'pt-BR'].join('|');
+
+  return (
+    i18n[k1]?.texto_exibicao ||
+    i18n[k2]?.texto_exibicao ||
+    fallback ||
+    i18n[k3]?.texto_exibicao ||
+    i18n[k4]?.texto_exibicao ||
+    chaveStr
+  );
+}
+
+
+function trCurto(modulo, tipo, chave, fallback) {
+
+  const chaveStr =
+    String(chave || '').trim();
+
+  if (!chaveStr) {
+    return fallback || '';
+  }
+
+  const k1 =
+    [modulo || 'GLOBAL', tipo, chaveStr, idioma].join('|');
+
+  const k2 =
+    ['GLOBAL', tipo, chaveStr, idioma].join('|');
+
+  const k3 =
+    [modulo || 'GLOBAL', tipo, chaveStr, 'pt-BR'].join('|');
+
+  const k4 =
+    ['GLOBAL', tipo, chaveStr, 'pt-BR'].join('|');
+
+  return (
+    i18n[k1]?.texto_curto ||
+    i18n[k2]?.texto_curto ||
+    fallback ||
+    i18n[k3]?.texto_curto ||
+    i18n[k4]?.texto_curto ||
+    chaveStr
+  );
+}
+
+
+function colCurta(chave, fallback) {
+  return trCurto(
+    'COMPETICOES',
+    'COLUNA',
+    chave,
+    fb(chave, fallback)
+  );
+}
+
+
+// ============================================================
+// 4. UTILITÁRIOS
+// ============================================================
+
+function esc(v) {
+
+  return String(v ?? '')
+    .replace(/[&<>"']/g, m => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[m]));
+}
+
+
+function localeAtual() {
+
+  if (idioma === 'en-US') {
+    return 'en-US';
+  }
+
+  if (idioma === 'es-ES') {
+    return 'es-ES';
+  }
+
+  return 'pt-BR';
+}
+
+
+function fmtData(v) {
+
+  if (!v) {
+    return '';
+  }
+
+  const d = new Date(v);
+
+  if (Number.isNaN(d.getTime())) {
+    return esc(v);
+  }
+
+  return d.toLocaleDateString(
+    localeAtual(),
+    {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }
+  );
+}
+
+
+function fmtHora(v) {
+
+  if (!v) {
+    return '';
+  }
+
+  const d = new Date(v);
+
+  if (Number.isNaN(d.getTime())) {
+    return '';
+  }
+
+  return d.toLocaleTimeString(
+    localeAtual(),
+    {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }
+  );
+}
+
+
+function fmtDataHora(v) {
+
+  if (!v) {
+    return '';
+  }
+
+  const d = new Date(v);
+
+  if (Number.isNaN(d.getTime())) {
+    return esc(v);
+  }
+
+  return d.toLocaleString(
+    localeAtual(),
+    {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }
+  );
+}
+
+
+function score(v) {
+
+  if (
+    v === null ||
+    v === undefined ||
+    v === ''
+  ) {
+    return '-';
+  }
+
+  return String(v);
+}
+
+
+// ============================================================
+// 5. NOMES / TIMES
+// ============================================================
+
+function isOrigemGenerica(nome) {
+
+  const v =
+    String(nome || '')
+      .trim()
+      .toLowerCase();
+
+  return (
+    !v ||
+    /^vencedor\s+/i.test(v) ||
+    /^winner\s+/i.test(v) ||
+    /^ganador\s+/i.test(v) ||
+    /^perdedor\s+/i.test(v) ||
+    /^loser\s+/i.test(v)
+  );
+}
+
+
+function origemTraduzida(origem) {
+
+  const valor =
+    String(origem || '').trim();
+
+  if (!valor) {
+    return tr(
+      'GLOBAL',
+      'LABEL',
+      'a_definir',
+      fb('a_definir', 'A definir')
+    );
+  }
+
+  const mVencedorPt =
+    valor.match(/^Vencedor\s+(.+)$/i);
+
+  if (mVencedorPt) {
+    return `${tr(
+      'COMPETICOES',
+      'LABEL',
+      'vencedor',
+      fb('vencedor', 'Vencedor')
+    )} ${mVencedorPt[1]}`;
+  }
+
+  const mPerdedorPt =
+    valor.match(/^Perdedor\s+(.+)$/i);
+
+  if (mPerdedorPt) {
+    return `${tr(
+      'COMPETICOES',
+      'LABEL',
+      'perdedor',
+      fb('perdedor', 'Perdedor')
+    )} ${mPerdedorPt[1]}`;
+  }
+
+  const mWinner =
+    valor.match(/^Winner\s+(.+)$/i);
+
+  if (mWinner) {
+    return `${tr(
+      'COMPETICOES',
+      'LABEL',
+      'vencedor',
+      fb('vencedor', 'Vencedor')
+    )} ${mWinner[1]}`;
+  }
+
+  const mLoser =
+    valor.match(/^Loser\s+(.+)$/i);
+
+  if (mLoser) {
+    return `${tr(
+      'COMPETICOES',
+      'LABEL',
+      'perdedor',
+      fb('perdedor', 'Perdedor')
+    )} ${mLoser[1]}`;
+  }
+
+  const mGanador =
+    valor.match(/^Ganador\s+(.+)$/i);
+
+  if (mGanador) {
+    return `${tr(
+      'COMPETICOES',
+      'LABEL',
+      'vencedor',
+      fb('vencedor', 'Vencedor')
+    )} ${mGanador[1]}`;
+  }
+
+  return valor;
+}
+
+
+function teamName(t, origem) {
+
+  const nomeOriginal =
+    String(t?.nome || '').trim();
+
+  if (isOrigemGenerica(nomeOriginal)) {
+    return origemTraduzida(nomeOriginal);
+  }
+
+  if (nomeOriginal) {
+    return tr(
+      'GLOBAL',
+      'TIME',
+      nomeOriginal,
+      nomeOriginal
+    );
+  }
+
+  return origemTraduzida(origem);
+}
+
+
+function teamShort(t, origem) {
+
+  if (!t) {
+    return origemTraduzida(origem);
+  }
+
+  const nome =
+    String(t.sigla || t.abreviacao || t.nome || '').trim();
+
+  if (!nome) {
+    return origemTraduzida(origem);
+  }
+
+  if (isOrigemGenerica(nome)) {
+    return origemTraduzida(nome);
+  }
+
+  return tr(
+    'GLOBAL',
+    'TIME',
+    nome,
+    nome
+  );
+}
+
+
+function teamLogo(t, nome) {
+
+  if (t?.escudo) {
+    return `<img src="${esc(t.escudo)}" alt="${esc(nome)}">`;
+  }
+
+  return `<span class="m360-placeholder-logo"></span>`;
+}
+
+
+// ============================================================
+// 6. STATUS
+// ============================================================
+
+function statusLabel(v) {
+
+  const s =
+    String(v || '')
+      .trim()
+      .toUpperCase();
+
+  const fallbackStatus = {
+
+    AGENDADO:
+      idioma === 'en-US'
+        ? 'Scheduled'
+        : idioma === 'es-ES'
+          ? 'Programado'
+          : 'Agendado',
+
+    AGUARDANDO:
+      idioma === 'en-US'
+        ? 'Waiting'
+        : idioma === 'es-ES'
+          ? 'En espera'
+          : 'Aguardando',
+
+    TIMED:
+      idioma === 'en-US'
+        ? 'Scheduled'
+        : idioma === 'es-ES'
+          ? 'Programado'
+          : 'Agendado',
+
+    SCHEDULED:
+      idioma === 'en-US'
+        ? 'Scheduled'
+        : idioma === 'es-ES'
+          ? 'Programado'
+          : 'Agendado',
+
+    FINISHED:
+      idioma === 'en-US'
+        ? 'Finished'
+        : idioma === 'es-ES'
+          ? 'Finalizado'
+          : 'Encerrado',
+
+    IN_PLAY:
+      idioma === 'en-US'
+        ? 'Live'
+        : idioma === 'es-ES'
+          ? 'En vivo'
+          : 'Ao vivo',
+
+    LIVE:
+      idioma === 'en-US'
+        ? 'Live'
+        : idioma === 'es-ES'
+          ? 'En vivo'
+          : 'Ao vivo',
+
+    PAUSED:
+      idioma === 'en-US'
+        ? 'Half-time'
+        : idioma === 'es-ES'
+          ? 'Descanso'
+          : 'Intervalo',
+
+    POSTPONED:
+      idioma === 'en-US'
+        ? 'Postponed'
+        : idioma === 'es-ES'
+          ? 'Aplazado'
+          : 'Adiado',
+
+    CANCELLED:
+      idioma === 'en-US'
+        ? 'Cancelled'
+        : 'Cancelado',
+
+    CANCELED:
+      idioma === 'en-US'
+        ? 'Cancelled'
+        : 'Cancelado'
+  };
+
+  return tr(
+    'GLOBAL',
+    'STATUS_JOGO',
+    s,
+    fallbackStatus[s] ||
+    v ||
+    fb('a_definir', 'A definir')
+  );
+}
+
+
+// ============================================================
+// 7. RODADAS
+// ============================================================
+
+function rodadaNumero(v) {
+
+  const m =
+    String(v || '')
+      .match(/\d+/);
+
+  return m
+    ? Number(m[0])
+    : 9999;
+}
+
+
+function rodadaNomeTraduzida(nome, grupo = false) {
+
+  const valor =
+    String(nome || '').trim();
+
+  if (!valor) {
+    return fb(
+      grupo
+        ? 'rodada_grupo'
+        : 'rodada',
+      grupo
+        ? 'Rodada'
+        : 'Rodada'
+    );
+  }
+
+  const numero =
+    rodadaNumero(valor);
+
+  if (
+    Number.isFinite(numero) &&
+    numero !== 9999
+  ) {
+    return `${fb(
+      grupo
+        ? 'rodada_grupo'
+        : 'rodada',
+      'Rodada'
+    )} ${numero}`;
+  }
+
+  return valor;
+}
+
+
+function grupoNomeTraduzido(grupoKey, grupoData) {
+
+  const nome =
+    String(
+      grupoData?.nome ||
+      grupoData?.grupo ||
+      grupoKey ||
+      ''
+    ).trim();
+
+  if (!nome) {
+    return fb('grupo', 'Grupo');
+  }
+
+  const m =
+    nome.match(/^Grupo\s+(.+)$/i);
+
+  if (m) {
+    return `${fb('grupo', 'Grupo')} ${m[1]}`;
+  }
+
+  return nome;
+}
+
+
+// ============================================================
+// 8. LIGA / PONTOS CORRIDOS
+// ============================================================
+
+function renderLigaTabela() {
+
+  const tabela =
+    Array.isArray(liga.classificacao)
+      ? liga.classificacao
+      : [];
+
+  return `
+    <div class="m360-group-table m360-league-table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>${esc(tr(
+              'COMPETICOES',
+              'LABEL',
+              'classificacao',
+              fb('classificacao', 'CLASSIFICAÇÃO')
+            ))}</th>
+            <th>${esc(colCurta('col_pontos', 'Pts'))}</th>
+            <th>${esc(colCurta('col_jogos', 'J'))}</th>
+            <th>${esc(colCurta('col_vitorias', 'V'))}</th>
+            <th>${esc(colCurta('col_empates', 'E'))}</th>
+            <th>${esc(colCurta('col_derrotas', 'D'))}</th>
+            <th>${esc(colCurta('col_gols_pro', 'GP'))}</th>
+            <th>${esc(colCurta('col_gols_contra', 'GC'))}</th>
+            <th>${esc(colCurta('col_saldo_gols', 'SG'))}</th>
+            <th>%</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${
+            tabela.length
+              ? tabela.map(t => {
+
+                  const jogos =
+                    Number(t.jogos || 0);
+
+                  const pontos =
+                    Number(t.pontos || 0);
+
+                  const aproveitamento =
+                    jogos > 0
+                      ? Math.round(
+                          (pontos / (jogos * 3)) * 100
+                        )
+                      : 0;
+
+                  const nomeTraduzido =
+                    tr(
+                      'GLOBAL',
+                      'TIME',
+                      t.nome,
+                      t.nome
+                    );
+
+                  return `
+                    <tr>
+                      <td>${esc(t.posicao)}</td>
+
+                      <td class="m360-club">
+                        ${
+                          t.escudo
+                            ? `<img src="${esc(t.escudo)}"
+                                alt="${esc(nomeTraduzido)}">`
+                            : ''
+                        }
+
+                        <span>
+                          ${esc(nomeTraduzido)}
+                        </span>
+                      </td>
+
+                      <td><strong>${esc(t.pontos)}</strong></td>
+                      <td>${esc(t.jogos)}</td>
+                      <td>${esc(t.vitorias)}</td>
+                      <td>${esc(t.empates)}</td>
+                      <td>${esc(t.derrotas)}</td>
+                      <td>${esc(t.gols_pro)}</td>
+                      <td>${esc(t.gols_contra)}</td>
+                      <td>${esc(t.saldo_gols)}</td>
+                      <td>${esc(aproveitamento)}</td>
+                    </tr>
+                  `;
+
+                }).join('')
+
+              : `
+                <tr>
+                  <td colspan="11" class="m360-empty">
+                    ${esc(tr(
+                      'COMPETICOES',
+                      'LABEL',
+                      'classificacao_indisponivel',
+                      fb(
+                        'classificacao_indisponivel',
+                        'Classificação ainda não disponível.'
+                      )
+                    ))}
+                  </td>
+                </tr>
+              `
+          }
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+
+function renderLigaJogo(j) {
+
+  return `
+    <div class="m360-round-game">
+
+      <div class="m360-round-date">
+        ${esc(j.estadio || '')}
+        ${j.estadio ? ' · ' : ''}
+        <strong>
+          ${esc(fmtDataHora(j.data_jogo))}
+        </strong>
+      </div>
+
+      <div class="m360-round-scoreline">
+
+        <div class="m360-round-team m360-round-team-left">
+          <span>
+            ${esc(
+              teamShort(
+                j.mandante,
+                j.mandante?.nome
+              )
+            )}
+          </span>
+
+          ${
+            j.mandante?.escudo
+              ? `<img src="${esc(j.mandante.escudo)}"
+                   alt="${esc(
+                     teamName(
+                       j.mandante,
+                       j.mandante?.nome
+                     )
+                   )}">`
+              : ''
+          }
+        </div>
+
+        <div class="m360-round-score">
+          ${score(j.placar_mandante)}
+          x
+          ${score(j.placar_visitante)}
+        </div>
+
+        <div class="m360-round-team m360-round-team-right">
+
+          ${
+            j.visitante?.escudo
+              ? `<img src="${esc(j.visitante.escudo)}"
+                   alt="${esc(
+                     teamName(
+                       j.visitante,
+                       j.visitante?.nome
+                     )
+                   )}">`
+              : ''
+          }
+
+          <span>
+            ${esc(
+              teamShort(
+                j.visitante,
+                j.visitante?.nome
+              )
+            )}
+          </span>
+
+        </div>
+      </div>
+
+      ${
+        j.estadio
+          ? `<div class="m360-round-stadium">
+               ${esc(j.estadio)}
+             </div>`
+          : ''
+      }
+
+    </div>
+  `;
+}
+
+
+function getLigaRodadaInicial(rodadas) {
+
+  if (!rodadas.length) {
+    return 0;
+  }
+
+  const aberta =
+    rodadas.findIndex(r =>
+      (r.jogos || []).some(j =>
+        [
+          'TIMED',
+          'SCHEDULED',
+          'IN_PLAY'
+        ].includes(
+          String(j.status || '').toUpperCase()
+        )
+      )
+    );
+
+  if (aberta >= 0) {
+    return aberta;
+  }
+
+  const ultimaFinalizada =
+    [...rodadas]
+      .map((r, index) => ({
+        r,
+        index
+      }))
+      .filter(x =>
+        (x.r.jogos || []).some(j =>
+          String(j.status || '').toUpperCase() === 'FINISHED'
+        )
+      )
+      .pop();
+
+  return ultimaFinalizada
+    ? ultimaFinalizada.index
+    : 0;
+}
+
+
+function renderLigaJogos() {
+
+  const rodadas =
+    Array.isArray(liga.rodadas)
+      ? [...liga.rodadas]
+          .sort(
+            (a, b) =>
+              rodadaNumero(
+                a.rodada || a.nome
+              ) -
+              rodadaNumero(
+                b.rodada || b.nome
+              )
+          )
+      : [];
+
+  if (!rodadas.length) {
+
+    return `
+      <p class="m360-empty">
+        ${esc(tr(
+          'COMPETICOES',
+          'LABEL',
+          'jogos_indisponiveis',
+          fb(
+            'jogos_indisponiveis',
+            'Jogos indisponíveis.'
+          )
+        ))}
+      </p>
+    `;
+  }
+
+  const inicial =
+    getLigaRodadaInicial(rodadas);
+
+  return `
+    <div
+      class="m360-round-widget"
+      data-round-index="${inicial}"
+    >
+
+      <div class="m360-round-nav">
+
+        <button
+          type="button"
+          class="m360-round-prev"
+        >‹</button>
+
+        <strong class="m360-round-title">
+          ${esc(
+            rodadaNomeTraduzida(
+              rodadas[inicial]?.nome,
+              false
+            )
+          )}
+        </strong>
+
+        <button
+          type="button"
+          class="m360-round-next"
+        >›</button>
+
+      </div>
+
+      ${rodadas.map((rodada, index) => `
+
+        <div
+          class="m360-round-panel ${index === inicial ? 'active' : ''}"
+          data-round-name="${esc(
+            rodadaNomeTraduzida(
+              rodada.nome,
+              false
+            )
+          )}"
+        >
+
+          ${(rodada.jogos || [])
+            .map(renderLigaJogo)
+            .join('')}
+
+        </div>
+
+      `).join('')}
+
+    </div>
+  `;
+}
+
+
+function renderLigaLayout() {
+
+  return `
+    <div class="m360-league-layout">
+
+      <section class="m360-league-main">
+
+        <h2 class="m360-league-title">
+          ${esc(tr(
+            'COMPETICOES',
+            'LABEL',
+            'tabela',
+            fb('tabela', 'TABELA')
+          ))}
+        </h2>
+
+        ${renderLigaTabela()}
+
+      </section>
+
+      <aside class="m360-league-side">
+
+        <h2 class="m360-league-title">
+          ${esc(tr(
+            'COMPETICOES',
+            'LABEL',
+            'jogos',
+            fb('jogos', 'JOGOS')
+          ))}
+        </h2>
+
+        ${renderLigaJogos()}
+
+      </aside>
+
+    </div>
+  `;
+}
+
+
+// ============================================================
+// 9. GRUPOS / COPAS
+// ============================================================
+
+function renderTabelaGrupo(grupoKey) {
+
+  const tabela =
+    classificacao[grupoKey] || [];
+
+  return `
+    <div class="m360-group-table">
+
+      <table>
+
+        <thead>
+
+          <tr>
+
+            <th>#</th>
+
+            <th>
+              ${esc(tr(
+                'COMPETICOES',
+                'LABEL',
+                'classificacao',
+                fb(
+                  'classificacao',
+                  'CLASSIFICAÇÃO'
+                )
+              ))}
+            </th>
+
+            <th>${esc(colCurta('col_pontos', 'Pts'))}</th>
+            <th>${esc(colCurta('col_jogos', 'J'))}</th>
+            <th>${esc(colCurta('col_vitorias', 'V'))}</th>
+            <th>${esc(colCurta('col_empates', 'E'))}</th>
+            <th>${esc(colCurta('col_derrotas', 'D'))}</th>
+            <th>${esc(colCurta('col_gols_pro', 'GP'))}</th>
+            <th>${esc(colCurta('col_gols_contra', 'GC'))}</th>
+            <th>${esc(colCurta('col_saldo_gols', 'SG'))}</th>
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          ${
+            tabela.length
+
+              ? tabela.map(t => {
+
+                  const nomeTraduzido =
+                    tr(
+                      'GLOBAL',
+                      'TIME',
+                      t.nome,
+                      t.nome
+                    );
+
+                  return `
+                    <tr>
+
+                      <td>${esc(t.posicao)}</td>
+
+                      <td class="m360-club">
+
+                        ${
+                          t.escudo
+                            ? `<img
+                                src="${esc(t.escudo)}"
+                                alt="${esc(nomeTraduzido)}"
+                              >`
+                            : ''
+                        }
+
+                        <span>
+                          ${esc(nomeTraduzido)}
+                        </span>
+
+                      </td>
+
+                      <td>
+                        <strong>
+                          ${esc(t.pontos)}
+                        </strong>
+                      </td>
+
+                      <td>${esc(t.jogos)}</td>
+                      <td>${esc(t.vitorias)}</td>
+                      <td>${esc(t.empates)}</td>
+                      <td>${esc(t.derrotas)}</td>
+                      <td>${esc(t.gols_pro)}</td>
+                      <td>${esc(t.gols_contra)}</td>
+                      <td>${esc(t.saldo_gols)}</td>
+
+                    </tr>
+                  `;
+
+                }).join('')
+
+              : `
+                <tr>
+                  <td
+                    colspan="10"
+                    class="m360-empty"
+                  >
+                    ${esc(tr(
+                      'COMPETICOES',
+                      'LABEL',
+                      'classificacao_indisponivel',
+                      fb(
+                        'classificacao_indisponivel',
+                        'Classificação ainda não disponível.'
+                      )
+                    ))}
+                  </td>
+                </tr>
+              `
+          }
+
+        </tbody>
+
+      </table>
+
+    </div>
+  `;
+}
+
+
+function renderJogoRodada(j) {
+
+  return `
+    <div class="m360-round-game">
+
+      <div class="m360-round-date">
+        ${esc(fmtData(j.data_jogo))}
+      </div>
+
+      <div class="m360-round-scoreline">
+
+        <div class="m360-round-team m360-round-team-left">
+
+          <span>
+            ${esc(
+              teamShort(
+                j.mandante,
+                j.mandante?.nome
+              )
+            )}
+          </span>
+
+          ${
+            j.mandante?.escudo
+              ? `<img
+                  src="${esc(j.mandante.escudo)}"
+                  alt="${esc(
+                    teamName(
+                      j.mandante,
+                      j.mandante?.nome
+                    )
+                  )}"
+                >`
+              : ''
+          }
+
+        </div>
+
+        <div class="m360-round-score">
+
+          ${score(j.placar_mandante)}
+          x
+          ${score(j.placar_visitante)}
+
+        </div>
+
+        <div class="m360-round-team m360-round-team-right">
+
+          ${
+            j.visitante?.escudo
+              ? `<img
+                  src="${esc(j.visitante.escudo)}"
+                  alt="${esc(
+                    teamName(
+                      j.visitante,
+                      j.visitante?.nome
+                    )
+                  )}"
+                >`
+              : ''
+          }
+
+          <span>
+            ${esc(
+              teamShort(
+                j.visitante,
+                j.visitante?.nome
+              )
+            )}
+          </span>
+
+        </div>
+
+      </div>
+
+      ${
+        j.estadio
+          ? `<div class="m360-round-stadium">
+               ${esc(j.estadio)}
+             </div>`
+          : ''
+      }
+
+    </div>
+  `;
+}
+
+
+function renderJogosRodadas(grupoData) {
+
+  const rodadas =
+    Array.isArray(grupoData?.rodadas)
+      ? grupoData.rodadas
+      : [];
+
+  if (!rodadas.length) {
+
+    return `
+      <p class="m360-empty">
+        ${esc(tr(
+          'COMPETICOES',
+          'LABEL',
+          'jogos_indisponiveis',
+          fb(
+            'jogos_indisponiveis',
+            'Jogos indisponíveis.'
+          )
+        ))}
+      </p>
+    `;
+  }
+
+  return `
+    <div
+      class="m360-round-widget"
+      data-round-index="0"
+    >
+
+      <div class="m360-round-nav">
+
+        <button
+          type="button"
+          class="m360-round-prev"
+        >‹</button>
+
+        <strong class="m360-round-title">
+          ${esc(
+            rodadaNomeTraduzida(
+              rodadas[0].nome,
+              true
+            )
+          )}
+        </strong>
+
+        <button
+          type="button"
+          class="m360-round-next"
+        >›</button>
+
+      </div>
+
+      ${rodadas.map((rodada, index) => `
+
+        <div
+          class="m360-round-panel ${index === 0 ? 'active' : ''}"
+          data-round-name="${esc(
+            rodadaNomeTraduzida(
+              rodada.nome,
+              true
+            )
+          )}"
+        >
+
+          ${(rodada.jogos || [])
+            .map(renderJogoRodada)
+            .join('')}
+
+        </div>
+
+      `).join('')}
+
+    </div>
+  `;
+}
+
+
+function renderGroupBlock(grupoKey, grupoData) {
+
+  const grupoNome =
+    grupoNomeTraduzido(
+      grupoKey,
+      grupoData
+    );
+
+  return `
+    <div class="m360-group-block">
+
+      <h3>
+        ${esc(grupoNome)}
+      </h3>
+
+      <div class="m360-group-layout">
+
+        <div class="m360-group-left">
+          ${renderTabelaGrupo(grupoKey)}
+        </div>
+
+        <div class="m360-group-right">
+          ${renderJogosRodadas(grupoData)}
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function renderGrupos() {
+
+  const keys =
+    Object.keys(grupos).sort();
+
+  if (!keys.length) {
+
+    return `
+      <p class="m360-empty">
+        ${esc(tr(
+          'COMPETICOES',
+          'LABEL',
+          'fase_grupos_indisponivel',
+          fb(
+            'fase_grupos_indisponivel',
+            'Fase de grupos indisponível.'
+          )
+        ))}
+      </p>
+    `;
+  }
+
+  return keys
+    .map(key =>
+      renderGroupBlock(
+        key,
+        grupos[key]
+      )
+    )
+    .join('');
+}
+
+
+// ============================================================
+// 10. MATA-MATA
+//
+// IMPORTANTE:
+// O conteúdo abaixo APENAS PUBLICA.
+// Não recalcula gols agregados,
+// vencedor ou pênaltis.
+// ============================================================
+
+function renderTime(t, origem) {
+
+  const nome =
+    teamName(t, origem);
+
+  return `
+    <div class="m360-ko-team">
+
+      ${teamLogo(t, nome)}
+
+      <span title="${esc(nome)}">
+        ${esc(nome)}
+      </span>
+
+    </div>
+  `;
+}
+
+
+function renderLeg(c, tipo) {
+
+  const isVolta =
+    tipo === 'volta';
+
+  const mandante =
+    isVolta
+      ? c.time_b
+      : c.time_a;
+
+  const visitante =
+    isVolta
+      ? c.time_a
+      : c.time_b;
+
+  const origemMandante =
+    isVolta
+      ? c.origem_time_b
+      : c.origem_time_a;
+
+  const origemVisitante =
+    isVolta
+      ? c.origem_time_a
+      : c.origem_time_b;
+
+  const data =
+    isVolta
+      ? c.data_volta
+      : c.data_ida;
+
+  const dataIso =
+    isVolta
+      ? (
+          c.data_volta_iso ||
+          c.data_segundo_jogo
+        )
+      : (
+          c.data_ida_iso ||
+          c.data_primeiro_jogo
+        );
+
+  const horario =
+    fmtHora(dataIso);
+
+  const jogoUnico =
+    Number(c.possui_volta) === 0 ||
+    Boolean(c.jogo_unico_uid);
+
+  const estadio =
+    isVolta
+      ? c.estadio_volta_nome
+      : (
+          jogoUnico
+            ? c.estadio_unico_nome
+            : c.estadio_ida_nome
+        );
+
+  // ----------------------------------------------------------
+  // PLACAR REGULAMENTAR — PRIORIDADE ABSOLUTA
+  //
+  // O Node 8.1 v2 entrega explicitamente o placar regulamentar
+  // nos campos placar_normal_* / placar_regulamentar_*.
+  //
+  // REGRA DE PUBLICAÇÃO:
+  // 1. placar_normal_*
+  // 2. placar_regulamentar_*
+  // 3. placar_* legado, somente se os anteriores não existirem
+  //
+  // Quando houver pênaltis, o placar principal NUNCA usa
+  // gols_time_a/b nem placar agregado do confronto.
+  // Os pênaltis continuam sendo apresentados separadamente
+  // pelo Node 8.3.
+  //
+  // O 8.2 NÃO calcula, subtrai ou reconstrói placares.
+  // Apenas publica os campos normalizados recebidos do 8.1.
+  // ----------------------------------------------------------
+
+  const pm =
+    isVolta
+      ? (
+          c?.placar_normal_volta_mandante ??
+          c?.placar_regulamentar_volta_mandante ??
+          c?.placar_volta_mandante ??
+          null
+        )
+      : (
+          c?.placar_normal_ida_mandante ??
+          c?.placar_regulamentar_ida_mandante ??
+          c?.placar_ida_mandante ??
+          null
+        );
+
+  const pv =
+    isVolta
+      ? (
+          c?.placar_normal_volta_visitante ??
+          c?.placar_regulamentar_volta_visitante ??
+          c?.placar_volta_visitante ??
+          null
+        )
+      : (
+          c?.placar_normal_ida_visitante ??
+          c?.placar_regulamentar_ida_visitante ??
+          c?.placar_ida_visitante ??
+          null
+        );
+
+  return `
+    <div class="m360-ko-leg">
+
+      <div class="m360-ko-leg-head">
+
+        ${esc(
+          isVolta
+            ? tr(
+                'COMPETICOES',
+                'LABEL',
+                'volta',
+                fb('volta', 'VOLTA')
+              )
+            : tr(
+                'COMPETICOES',
+                'LABEL',
+                'jogo',
+                fb('jogo', 'JOGO')
+              )
+        )}
+
+      </div>
+
+      <div class="m360-ko-meta">
+
+        ${
+          data
+            ? `<strong>
+                ${esc(data)}
+                ${
+                  horario
+                    ? ` · ${esc(horario)}`
+                    : ''
+                }
+              </strong>`
+            : ''
+        }
+
+        ${
+          estadio
+            ? `<span>
+                 · ${esc(estadio)}
+               </span>`
+            : ''
+        }
+
+      </div>
+
+      <div class="m360-ko-match">
+
+        ${renderTime(
+          mandante,
+          origemMandante
+        )}
+
+        <div class="m360-ko-score">
+          ${score(pm)}
+          x
+          ${score(pv)}
+        </div>
+
+        ${renderTime(
+          visitante,
+          origemVisitante
+        )}
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function getFallbackDates(lista) {
+
+  const ref =
+    (lista || []).find(c =>
+      c.data_ida ||
+      c.data_volta ||
+      c.data_primeiro_jogo ||
+      c.data_segundo_jogo
+    );
+
+  return {
+
+    data_ida:
+      ref?.data_ida ||
+      fmtData(ref?.data_primeiro_jogo) ||
+      '',
+
+    data_volta:
+      ref?.data_volta ||
+      fmtData(ref?.data_segundo_jogo) ||
+      ''
+  };
+}
+
+
+function renderMataFase(lista, vazioTexto) {
+
+  if (!lista || !lista.length) {
+
+    return `
+      <p class="m360-empty">
+        ${esc(
+          vazioTexto ||
+          fb(
+            'fase_indisponivel',
+            'Fase ainda não disponível.'
+          )
+        )}
+      </p>
+    `;
+  }
+
+  const fallback =
+    getFallbackDates(lista);
+
+  return `
+    <div class="m360-ko-list">
+
+      ${lista.map(c => {
+
+        const dataIda =
+          c.data_ida ||
+          fmtData(c.data_primeiro_jogo) ||
+          fallback.data_ida;
+
+        const dataVolta =
+          c.data_volta ||
+          fmtData(c.data_segundo_jogo) ||
+          fallback.data_volta;
+
+        const jogoUnico =
+          c.fase === 'FINAL' ||
+          c.fase_slug === 'final' ||
+          Number(c.possui_volta) === 0 ||
+          Boolean(c.jogo_unico_uid);
+
+        const confronto = {
+          ...c,
+
+          data_ida: dataIda,
+          data_volta: dataVolta,
+
+          // ----------------------------------------------------
+          // PLACAR REGULAMENTAR — PASS-THROUGH
+          //
+          // O 8.2 não inventa nem recalcula placares.
+          // Apenas normaliza aliases caso o Node 8.1/DW já os
+          // entregue separados dos pênaltis.
+          // ----------------------------------------------------
+          placar_normal_ida_mandante:
+            c?.placar_normal_ida_mandante ??
+            c?.placar_regulamentar_ida_mandante ??
+            null,
+
+          placar_normal_ida_visitante:
+            c?.placar_normal_ida_visitante ??
+            c?.placar_regulamentar_ida_visitante ??
+            null,
+
+          placar_normal_volta_mandante:
+            c?.placar_normal_volta_mandante ??
+            c?.placar_regulamentar_volta_mandante ??
+            null,
+
+          placar_normal_volta_visitante:
+            c?.placar_normal_volta_visitante ??
+            c?.placar_regulamentar_volta_visitante ??
+            null,
+
+          placar_normal_unico_mandante:
+            c?.placar_normal_unico_mandante ??
+            c?.placar_regulamentar_unico_mandante ??
+            null,
+
+          placar_normal_unico_visitante:
+            c?.placar_normal_unico_visitante ??
+            c?.placar_regulamentar_unico_visitante ??
+            null
+        };
+
+        return `
+
+          <div class="m360-ko-card">
+
+            <div class="m360-ko-key">
+
+              ${esc(
+                confronto.chave || ''
+              )}
+
+              ·
+
+              ${esc(
+                statusLabel(
+                  confronto.status ||
+                  confronto.status_confronto ||
+                  ''
+                )
+              )}
+
+            </div>
+
+            ${
+              jogoUnico
+
+                ? renderLeg(
+                    confronto,
+                    'ida'
+                  )
+
+                : `
+                  <div class="m360-ko-two-cols">
+
+                    ${renderLeg(
+                      confronto,
+                      'ida'
+                    )}
+
+                    ${renderLeg(
+                      confronto,
+                      'volta'
+                    )}
+
+                  </div>
+                `
+            }
+
+          </div>
+        `;
+
+      }).join('')}
+
+    </div>
+  `;
+}
+
+
+// ============================================================
+// 11. CONFIGURAÇÃO DAS FASES
+// ============================================================
+
+const fasesConfigBase = [
+
+  {
+    key: 'grupos',
+    slug: 'grupos',
+
+    title:
+      tr(
+        'COMPETICOES',
+        'FASE',
+        'GROUP_STAGE',
+        fb(
+          'GROUP_STAGE',
+          'FASE DE GRUPOS'
+        )
+      ).toUpperCase(),
+
+    id: 'm360-grupos',
+
+    html:
+      renderGrupos(),
+
+    enabled:
+      Object.keys(grupos).length > 0
+  },
+
+  {
+    key: 'fase_32',
+    slug: '32avos',
+
+    title:
+      tr(
+        'COMPETICOES',
+        'FASE',
+        'LAST_32',
+        fb(
+          'LAST_32',
+          '32 AVOS DE FINAL'
+        )
+      ).toUpperCase(),
+
+    id: 'm360-32avos',
+
+    html:
+      renderMataFase(
+        mata.fase_32,
+        fb(
+          'vazio_32',
+          '32 avos de final ainda não disponíveis.'
+        )
+      ),
+
+    enabled:
+      Array.isArray(mata.fase_32) &&
+      mata.fase_32.length > 0
+  },
+
+  {
+    key: 'oitavas',
+    slug: 'oitavas',
+
+    title:
+      tr(
+        'COMPETICOES',
+        'FASE',
+        'LAST_16',
+        fb(
+          'LAST_16',
+          'OITAVAS DE FINAL'
+        )
+      ).toUpperCase(),
+
+    id: 'm360-oitavas',
+
+    html:
+      renderMataFase(
+        mata.oitavas,
+        fb(
+          'vazio_oitavas',
+          'Oitavas de final ainda não disponíveis.'
+        )
+      ),
+
+    enabled:
+      Array.isArray(mata.oitavas) &&
+      mata.oitavas.length > 0
+  },
+
+  {
+    key: 'quartas',
+    slug: 'quartas',
+
+    title:
+      tr(
+        'COMPETICOES',
+        'FASE',
+        'QUARTER_FINALS',
+        fb(
+          'QUARTER_FINALS',
+          'QUARTAS DE FINAL'
+        )
+      ).toUpperCase(),
+
+    id: 'm360-quartas',
+
+    html:
+      renderMataFase(
+        mata.quartas,
+        fb(
+          'vazio_quartas',
+          'Quartas de final ainda não disponíveis.'
+        )
+      ),
+
+    enabled:
+      Array.isArray(mata.quartas) &&
+      mata.quartas.length > 0
+  },
+
+  {
+    key: 'semifinais',
+    slug: 'semifinais',
+
+    title:
+      tr(
+        'COMPETICOES',
+        'FASE',
+        'SEMI_FINALS',
+        fb(
+          'SEMI_FINALS',
+          'SEMIFINAL'
+        )
+      ).toUpperCase(),
+
+    id: 'm360-semifinais',
+
+    html:
+      renderMataFase(
+        mata.semifinais,
+        fb(
+          'vazio_semifinais',
+          'Semifinal ainda não disponível.'
+        )
+      ),
+
+    enabled:
+      Array.isArray(mata.semifinais) &&
+      mata.semifinais.length > 0
+  },
+
+  {
+    key: 'terceiro_lugar',
+    slug: 'terceiro-lugar',
+
+    title:
+      tr(
+        'COMPETICOES',
+        'FASE',
+        'THIRD_PLACE',
+        fb(
+          'THIRD_PLACE',
+          'DISPUTA DE 3º LUGAR'
+        )
+      ).toUpperCase(),
+
+    id: 'm360-terceiro-lugar',
+
+    html:
+      renderMataFase(
+        mata.terceiro_lugar,
+        fb(
+          'vazio_terceiro_lugar',
+          'Disputa de 3º lugar ainda não disponível.'
+        )
+      ),
+
+    enabled:
+      Array.isArray(mata.terceiro_lugar) &&
+      mata.terceiro_lugar.length > 0
+  },
+
+  {
+    key: 'final',
+    slug: 'final',
+
+    title:
+      tr(
+        'COMPETICOES',
+        'FASE',
+        'FINAL',
+        fb(
+          'FINAL',
+          'FINAL'
+        )
+      ).toUpperCase(),
+
+    id: 'm360-final',
+
+    html:
+      renderMataFase(
+        mata.final,
+        fb(
+          'vazio_final',
+          'Final ainda não disponível.'
+        )
+      ),
+
+    enabled:
+      Array.isArray(mata.final) &&
+      mata.final.length > 0
+  }
+
+];
+
+
+// ============================================================
+// 12. FILTRO DAS FASES DISPONÍVEIS
+// ============================================================
+
+let fasesConfig =
+  fasesConfigBase.filter(
+    f => f.enabled
+  );
+
+
+if (!fasesConfig.length) {
+
+  fasesConfig = [{
+
+    key: 'grupos',
+
+    slug: 'grupos',
+
+    title:
+      tr(
+        'COMPETICOES',
+        'FASE',
+        'GROUP_STAGE',
+        fb(
+          'GROUP_STAGE',
+          'FASE DE GRUPOS'
+        )
+      ).toUpperCase(),
+
+    id: 'm360-grupos',
+
+    html:
+      renderGrupos(),
+
+    enabled: true
+
+  }];
+
+}
+
+
+// ============================================================
+// 13. MODELO DA PUBLICAÇÃO
+// ============================================================
+
+const isLiga =
+  String(tipo_publicacao)
+    .toUpperCase() ===
+  'PONTOS_CORRIDOS';
+
+
+// ============================================================
+// 14. CONTEÚDO HTML ESTRUTURAL
+//
+// IMPORTANTE:
+// 8.2 NÃO inclui CSS global.
+// 8.2 NÃO inclui JS global.
+// 8.2 apenas monta o conteúdo.
+// ============================================================
+
+// ============================================================
+// 14.1 FASE INICIAL — FASE ATUAL DA COMPETIÇÃO
+//
+// Não altera o DW nem recalcula resultados.
+// Apenas escolhe a fase que deve aparecer aberta no carregamento.
+//
+// Critério:
+// 1. última fase com jogo em andamento/agendado;
+// 2. se não houver, última fase com jogo finalizado;
+// 3. fallback para a primeira fase disponível.
+//
+// A ordem abaixo representa o avanço natural das fases de copa.
+// ============================================================
+
+function statusNormalizado(v) {
+
+  return String(v || '')
+    .trim()
+    .toUpperCase();
+}
+
+
+function confrontoTemJogoAtivoOuAgendado(c) {
+
+  const statuses = [
+    c?.status,
+    c?.status_confronto,
+    c?.status_jogo_ida,
+    c?.status_jogo_volta,
+    c?.status_jogo_unico
+  ]
+    .map(statusNormalizado)
+    .filter(Boolean);
+
+  return statuses.some(s => [
+    'SCHEDULED',
+    'TIMED',
+    'IN_PLAY',
+    'LIVE',
+    'PAUSED',
+    'EM_ANDAMENTO',
+    'AO_VIVO',
+    'AGENDADO'
+  ].includes(s));
+}
+
+
+function confrontoTemJogoFinalizado(c) {
+
+  const statuses = [
+    c?.status,
+    c?.status_confronto,
+    c?.status_jogo_ida,
+    c?.status_jogo_volta,
+    c?.status_jogo_unico
+  ]
+    .map(statusNormalizado)
+    .filter(Boolean);
+
+  return statuses.some(s => [
+    'FINISHED',
+    'FINALIZADO',
+    'ENCERRADO',
+    'COMPLETED'
+  ].includes(s));
+}
+
+
+function faseTemStatus(fase, fn) {
+
+  const lista =
+    Array.isArray(mata[fase.key])
+      ? mata[fase.key]
+      : [];
+
+  return lista.some(fn);
+}
+
+
+function determinarFaseInicial() {
+
+  if (isLiga) {
+    return fasesConfig[0]?.slug || 'grupos';
+  }
+
+  // A fase atual é a PRIMEIRA fase, na ordem natural da
+  // competição, que possui jogo ativo/agendado.
+  //
+  // Não usar ordem reversa aqui: uma FINAL futura pode possuir
+  // jogo agendado e não deve ultrapassar uma OITAVAS atual.
+  for (let i = 0; i < fasesConfig.length; i++) {
+
+    const fase = fasesConfig[i];
+
+    if (faseTemStatus(
+      fase,
+      confrontoTemJogoAtivoOuAgendado
+    )) {
+      return fase.slug;
+    }
+  }
+
+  // Se não houver jogo ativo/agendado, abre a última fase
+  // que já possui jogo finalizado.
+  for (let i = fasesConfig.length - 1; i >= 0; i--) {
+
+    const fase = fasesConfig[i];
+
+    if (faseTemStatus(
+      fase,
+      confrontoTemJogoFinalizado
+    )) {
+      return fase.slug;
+    }
+  }
+
+  return fasesConfig[0]?.slug || 'grupos';
+}
+
+
+const activeSlug =
+  determinarFaseInicial();
+
+
+const conteudoHTML = `
+
+  <div class="m360-header">
+
+    ${
+      competicao.logo_url
+        ? `<img
+            src="${esc(competicao.logo_url)}"
+            alt="${esc(competicao.nome)}"
+          >`
+        : ''
+    }
+
+    <div>
+
+      <h2>
+        ${esc(
+          tr(
+            'COMPETICOES',
+            'COMPETICAO',
+            competicao.nome,
+            competicao.nome
+          )
+        )}
+
+        ${esc(
+          competicao.temporada || ''
+        )}
+      </h2>
+
+      <p>
+
+        ${esc(
+          competicao.total_jogos || 0
+        )}
+
+        ${esc(
+          tr(
+            'COMPETICOES',
+            'LABEL',
+            'jogos_label',
+            fb(
+              'jogos_label',
+              'jogos'
+            )
+          )
+        )}
+
+        ·
+
+        ${esc(
+          competicao.total_times || 0
+        )}
+
+        ${esc(
+          tr(
+            'COMPETICOES',
+            'LABEL',
+            'times_label',
+            fb(
+              'times_label',
+              'times'
+            )
+          )
+        )}
+
+      </p>
+
+    </div>
+
+  </div>
+
+
+  ${
+    isLiga
+
+      ? renderLigaLayout()
+
+      : `
+
+        <div class="m360-stage-nav">
+
+          <button
+            type="button"
+            class="m360-stage-btn"
+            id="m360-prev-fase"
+          >‹</button>
+
+          <div
+            class="m360-stage-title"
+            id="m360-stage-title"
+          ></div>
+
+          <button
+            type="button"
+            class="m360-stage-btn"
+            id="m360-next-fase"
+          >›</button>
+
+        </div>
+
+        ${fasesConfig.map(f => `
+
+          <section
+            id="${esc(f.id)}"
+            class="m360-section ${
+              f.slug === activeSlug
+                ? 'active'
+                : ''
+            }"
+          >
+            ${f.html}
+          </section>
+
+        `).join('')}
+
+      `
+  }
+
+`;
+
+
+// ============================================================
+// 15. METADADOS PARA O NODE 8.3
+// ============================================================
+
+const fases = fasesConfig.map(f => ({
+
+  key: f.key,
+
+  slug: f.slug,
+
+  title: f.title,
+
+  id: f.id,
+
+  enabled: Boolean(f.enabled)
+
+}));
+
+
+// ============================================================
+// 16. SAÍDA
+// ============================================================
+//
+// O 8.3 receberá:
+// - dados originais
+// - conteúdo HTML
+// - configuração das fases
+// - flags de modelo
+//
+// Não salva cache.
+// ============================================================
+
+return [
+
+  {
+
+    json: {
+
+      competicao,
+
+      classificacao,
+
+      grupos,
+
+      mata_mata: mata,
+
+      liga,
+
+      tipo_publicacao,
+
+      idioma,
+
+      i18n,
+
+      widget_nome:
+        `widget_competicao_${
+          String(
+            competicao.slug ||
+            'competicao'
+          )
+            .toLowerCase()
+            .replace(
+              /[^a-z0-9_-]/g,
+              '-'
+            )
+            .replace(
+              /-+/g,
+              '-'
+            )
+            .replace(
+              /^-|-$/g,
+              ''
+            )
+        }_${
+          competicao.temporada ||
+          'temporada'
+        }_${idioma}`,
+
+      isLiga,
+
+      activeSlug,
+
+      fases,
+
+      conteudoHTML,
+
+      meta_html: {
+
+        ...(data.meta_html || {}),
+
+        etapa: '8.2',
+
+        objetivo:
+          'GERAR_CONTEUDO_HTML',
+
+        conteudo_gerado: true,
+
+        css_gerado: false,
+
+        javascript_gerado: false,
+
+        cache_salvo: false,
+
+        fase_inicial: activeSlug,
+
+        placar_regulamentar_pass_through: true,
+
+        placar_regulamentar_prioridade: 'placar_normal_* > placar_regulamentar_* > placar_*'
+
+      }
+
+    }
+
+  }
+
+];
