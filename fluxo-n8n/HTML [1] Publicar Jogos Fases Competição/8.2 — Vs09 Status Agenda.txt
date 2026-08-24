@@ -1,0 +1,17 @@
+M360 — Node 8.2 — Vs09
+
+Ajuste da agenda de pontos corridos:
+
+1. Cada jogo passa a exibir uma etiqueta de status.
+2. FINISHED / FINALIZADO / ENCERRADO / COMPLETED => Finalizado.
+3. TIMED / SCHEDULED / AGENDADO => Agendado.
+4. IN_PLAY / LIVE / PAUSED / EM_ANDAMENTO / AO_VIVO => Em andamento.
+5. A etiqueta é renderizada abaixo da data/hora e acima do placar.
+6. Data/hora e estádio permanecem centralizados.
+7. Nenhuma alteração na classificação, rodadas, mata-mata ou DW.
+
+Arquivo local completo para aplicação no n8n:
+M360_Node_8.2_Vs09_Status_Agenda.txt
+
+Observação de manutenção:
+O arquivo de produção 8.2 — Gerar Conteúdo HTML permanece como fonte de verdade até a homologação desta Vs09. Após homologação, o conteúdo completo deve substituir o arquivo de produção oficial.
