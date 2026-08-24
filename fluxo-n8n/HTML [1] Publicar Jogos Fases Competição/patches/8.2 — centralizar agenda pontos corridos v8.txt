@@ -1,0 +1,24 @@
+M360 — Node 8.2
+AJUSTE: centralização da data/hora e do estádio na agenda de pontos corridos
+
+BASE:
+8.2 — Gerar Conteúdo HTML
+
+ALTERAÇÕES PONTUAIS EM renderLigaJogo():
+
+1) Substituir:
+<div class="m360-round-date">
+
+Por:
+<div class="m360-round-date" style="text-align:center;">
+
+2) Substituir:
+<div class="m360-round-stadium">
+
+Por:
+<div class="m360-round-stadium" style="text-align:center;">
+
+Nenhuma outra regra deve ser alterada.
+
+Arquivo completo correspondente:
+M360_Node_8.2_v8_Liga_70_30_Estadio_Centralizado.txt
